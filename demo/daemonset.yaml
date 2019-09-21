@@ -1,0 +1,32 @@
+---
+apiVersion: "extensions/v1beta1"
+kind: "DaemonSet"
+metadata:
+  name: "calico-accountant"
+  namespace: "kube-system"
+spec:
+  template:
+    metadata:
+      labels:
+        app: "calico-accountant"
+    spec:
+      containers:
+        - command:
+           - "/calico-accountant"
+           - "-logtostderr=true"
+           - "-v=2"
+          env:
+          - name: ETCD_ENDPOINTS
+            valueFrom:
+              configMapKeyRef:
+                name: calico-config
+                key: etcd_endpoints
+          - name: NODE_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: spec.nodeName
+          image: "monzo/calico-accountant:v0.1.0"
+          name: "calico-accountant"
+          securityContext:
+            privileged: true
+      hostNetwork: true
