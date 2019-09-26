@@ -49,7 +49,7 @@ See the demo manifest for one way to provide this. If you don't provide this to 
 ### Metrics 
 Metrics are implemented by Prometheus, which are hosted on the web server at `/metrics`. 
 
-Every scrape leads to two iptables list command per workload: it may be sensible to scrape rarely, eg every 1-5 minutes.
+Every scrape leads to a single `iptables-save` command.
 
 Exported metrics:
 ```go
