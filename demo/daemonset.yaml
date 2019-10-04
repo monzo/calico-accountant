@@ -25,7 +25,7 @@ spec:
             valueFrom:
               fieldRef:
                 fieldPath: spec.nodeName
-          image: "monzo/calico-accountant:v0.1.0"
+          image: "monzo/calico-accountant:v0.1.1"
           name: "calico-accountant"
           securityContext:
             privileged: true

@@ -88,9 +88,7 @@ func Run(cw watch.CalicoWatcher, port string) {
 
 	r.MustRegister(c)
 
-	handler := promhttp.HandlerFor(r, promhttp.HandlerOpts{
-		MaxRequestsInFlight: 1,
-	})
+	handler := promhttp.HandlerFor(r, promhttp.HandlerOpts{})
 
 	http.Handle("/metrics", handler)
 	err := http.ListenAndServe(fmt.Sprintf(":%v", port), nil)
