@@ -3,6 +3,7 @@ package metrics
 import (
 	"fmt"
 	"net/http"
+	"sync"
 
 	"github.com/golang/glog"
 	"github.com/monzo/calico-accountant/iptables"
@@ -34,7 +35,13 @@ func (c *Collector) Describe(ch chan<- *prometheus.Desc) {
 	ch <- dropDesc
 }
 
+var collectMtx sync.Mutex
+
 func (c *Collector) Collect(ch chan<- prometheus.Metric) {
+	// Prevent concurrent scrapes
+	collectMtx.Lock()
+	defer collectMtx.Unlock()
+
 	results, err := iptables.Scan(c.cw)
 	if err != nil {
 		glog.Errorf("Error scanning for metrics: %v", err)
