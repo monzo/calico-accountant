@@ -41,6 +41,20 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 		return
 	}
 
+	// There's seemingly an iptables bug where occasionally all counters drop to 0, but only for a split second,
+	// and then they jump back up. This really upsets prometheus, so we should drop scrapes when everything is zero.
+	var zeroCounter int
+	for _, result := range results {
+		if result.PacketCount == 0 {
+			zeroCounter++
+		}
+	}
+
+	if zeroCounter == len(results) {
+		glog.Warningf("Dropping scrape; all counters are zero (%d)", zeroCounter)
+		return
+	}
+
 	for _, result := range results {
 		err := parse(ch, result, c.cw)
 		if err != nil {
