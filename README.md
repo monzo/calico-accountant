@@ -45,6 +45,7 @@ providing `ETCD_ENDPOINTS`. The setup can be copied from the Calico kube-control
 * `NODENAME`: (string, default: hostname, to match calico node behaviour) Should be equal to `spec.nodeName`, ie the Kubernetes node name. 
 See the demo manifest for one way to provide this. If you don't provide this to calico node, you may not need to provide it here either.
 * `METRICS_SERVER_PORT`: (int, default: **9009**) Port for the service to host its metrics.
+* `MINIMUM_COUNTER`: (int, default **0**) Scrapes where all counts are below this value are dropped. This is to dodge iptables race conditions where counters briefly drop to near-zero and then return.
 
 ### Metrics 
 Metrics are implemented by Prometheus, which are hosted on the web server at `/metrics`. 
