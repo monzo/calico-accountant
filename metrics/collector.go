@@ -25,8 +25,16 @@ var acceptDesc = prometheus.NewDesc("policy_accept_counter", "Number of packets 
 	"policy",
 }, nil)
 
+var droppedScrapeCounter = prometheus.NewCounter(prometheus.CounterOpts{
+	Name: "calico_accountant_dropped_scrape",
+	Help: "Number of scrapes that were ignored because all counter values were below a minimum",
+})
+
 type Collector struct {
 	cw watch.CalicoWatcher
+
+	// If all scrapes are below this value, drop the scrape
+	minCounter int
 }
 
 func (c *Collector) Describe(ch chan<- *prometheus.Desc) {
@@ -41,17 +49,20 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 		return
 	}
 
-	// There's seemingly an iptables bug where occasionally all counters drop to 0, but only for a split second,
-	// and then they jump back up. This really upsets prometheus, so we should drop scrapes when everything is zero.
-	var zeroCounter int
+	// There's seemingly an iptables bug where occasionally all counters drop to 0 or near 0, but only for a split second,
+	// and then they jump back up. This really upsets prometheus, so we should drop scrapes when everything is small.
+	var scrapeAllowed bool
 	for _, result := range results {
-		if result.PacketCount == 0 {
-			zeroCounter++
+		if result.PacketCount >= c.minCounter {
+			scrapeAllowed = true
+			break
 		}
 	}
 
-	if zeroCounter == len(results) {
-		glog.Warningf("Dropping scrape; all counters are zero (%d)", zeroCounter)
+	if !scrapeAllowed {
+		glog.Warningf("Dropping scrape; all %d counters are below minimum count of %d", len(results), c.minCounter)
+
+		droppedScrapeCounter.Inc()
 		return
 	}
 
@@ -93,14 +104,16 @@ func parse(metricChan chan<- prometheus.Metric, r *iptables.Result, cw watch.Cal
 	return nil
 }
 
-func Run(cw watch.CalicoWatcher, port string) {
+func Run(cw watch.CalicoWatcher, port string, minCounter int) {
 	r := prometheus.NewRegistry()
 
 	c := &Collector{
-		cw: cw,
+		cw:         cw,
+		minCounter: minCounter,
 	}
 
 	r.MustRegister(c)
+	r.MustRegister(droppedScrapeCounter)
 
 	handler := promhttp.HandlerFor(r, promhttp.HandlerOpts{})
 
