@@ -167,7 +167,7 @@ func parseFrom(stdout io.Reader, interfaceToWorkload map[string]*apiv3.WorkloadE
 			}
 			results = append(results, result)
 		case isAccept:
-			// When we find an accept line, we care about the packet count on the previous line
+			// When we find an accept line, we care about the target on the previous line
 			result, err := buildResult(workload, Accept, typ, packetCount, lastTarget)
 			if err != nil {
 				glog.Errorf("Error building result from line %s: %v", string(line), err)
