@@ -13,12 +13,14 @@ import (
 
 var dropDesc = prometheus.NewDesc("no_policy_drop_counter", "Number of packets dropped to/from a workload because no policies matched them", []string{
 	"pod",
+	"pod_namespace",
 	"app",
 	"ip",
 	"type",
 }, nil)
 var acceptDesc = prometheus.NewDesc("policy_accept_counter", "Number of packets accepted by a policy on a workload", []string{
 	"pod",
+	"pod_namespace",
 	"app",
 	"ip",
 	"type",
@@ -82,6 +84,7 @@ func parse(metricChan chan<- prometheus.Metric, r *iptables.Result, cw watch.Cal
 			prometheus.CounterValue,
 			float64(r.PacketCount),
 			r.PodName,
+			r.PodNamespace,
 			r.AppLabel,
 			r.PodIP,
 			r.ChainType.String(),
@@ -94,6 +97,7 @@ func parse(metricChan chan<- prometheus.Metric, r *iptables.Result, cw watch.Cal
 			prometheus.CounterValue,
 			float64(r.PacketCount),
 			r.PodName,
+			r.PodNamespace,
 			r.AppLabel,
 			r.PodIP,
 			r.ChainType.String(),

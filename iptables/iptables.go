@@ -53,13 +53,14 @@ func (ct ChainType) String() string {
 }
 
 type Result struct {
-	PodName     string
-	AppLabel    string
-	PodIP       string
-	ChainType   ChainType
-	CountType   CountType
-	PacketCount int
-	Target      string
+	PodName      string
+	PodNamespace string
+	AppLabel     string
+	PodIP        string
+	ChainType    ChainType
+	CountType    CountType
+	PacketCount  int
+	Target       string
 }
 
 func Scan(cw watch.CalicoWatcher) ([]*Result, error) {
@@ -198,12 +199,13 @@ func buildResult(workload *apiv3.WorkloadEndpoint, countType CountType, chainTyp
 	sort.Strings(ips)
 
 	return &Result{
-		PodName:     workload.Spec.Pod,
-		AppLabel:    workload.Labels["app"],
-		PodIP:       strings.Join(ips, ","),
-		ChainType:   chainType,
-		CountType:   countType,
-		PacketCount: packetCount,
-		Target:      target,
+		PodName:      workload.Spec.Pod,
+		PodNamespace: workload.Namespace,
+		AppLabel:     workload.Labels["app"],
+		PodIP:        strings.Join(ips, ","),
+		ChainType:    chainType,
+		CountType:    countType,
+		PacketCount:  packetCount,
+		Target:       target,
 	}, nil
 }
