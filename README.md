@@ -33,7 +33,7 @@ order. If no packets are allowed by the allow all policy, then your restrictive 
 calico-accountant needs root privileges to interact with iptables.
 
 ### Container Spec
-We suggest running kube-iptables-tailer as a [Daemonset](https://kubernetes.io/docs/concepts/workloads/controllers/daemonset/) in your cluster. An example of YAML spec file can be found in [demo/](demo/).
+We suggest running calico-accountant as a [Daemonset](https://kubernetes.io/docs/concepts/workloads/controllers/daemonset/) in your cluster. An example of YAML spec file can be found in [demo/](demo/).
 
 ### Environment Variables 
 
