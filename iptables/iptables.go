@@ -18,7 +18,6 @@ import (
 
 type ChainType int
 type CountType int
-type PolicyType int
 
 const (
 	ToWorkLoad ChainType = iota
@@ -26,8 +25,6 @@ const (
 	Drop CountType = iota
 	Accept
 	AcceptedDrop
-	PolicyInbound PolicyType = iota
-	PolicyOutbound
 )
 
 func chainTypeFromString(str string) ChainType {
@@ -40,31 +37,6 @@ func chainTypeFromString(str string) ChainType {
 		glog.Fatalf("Unsupported chain type: %s", str)
 		// unreachable
 		return 0
-	}
-}
-
-func policyTypeFromString(str string) PolicyType {
-	switch str {
-	case "pi":
-		return PolicyInbound
-	case "po":
-		return PolicyOutbound
-	default:
-		glog.Fatalf("Unsupported policy type: %s", str)
-		// unreachable
-		return 0
-	}
-}
-
-func (pt PolicyType) String() string {
-	switch pt {
-	case PolicyInbound:
-		return "inbound"
-	case PolicyOutbound:
-		return "outbound"
-	default:
-		glog.Fatalf("Unsupported policy type: %d", pt)
-		return ""
 	}
 }
 
@@ -93,7 +65,6 @@ type Result struct {
 }
 
 type DropChain struct {
-	PolicyType  PolicyType
 	PacketCount int
 }
 
@@ -177,9 +148,7 @@ func parseFrom(stdout io.Reader, interfaceToWorkload map[string]*apiv3.WorkloadE
 				continue
 			}
 
-			policyType := policyTypeFromString(string(dropCapture[3]))
 			dropChains[string(dropCapture[2])] = DropChain{
-				PolicyType:  policyType,
 				PacketCount: dropPacketCount,
 			}
 		}
