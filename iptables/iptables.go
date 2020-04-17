@@ -18,12 +18,16 @@ import (
 
 type ChainType int
 type CountType int
+type PolicyType int
 
 const (
 	ToWorkLoad ChainType = iota
 	FromWorkLoad
 	Drop CountType = iota
 	Accept
+	AcceptedDrop
+	PolicyInbound PolicyType = iota
+	PolicyOutbound
 )
 
 func chainTypeFromString(str string) ChainType {
@@ -36,6 +40,31 @@ func chainTypeFromString(str string) ChainType {
 		glog.Fatalf("Unsupported chain type: %s", str)
 		// unreachable
 		return 0
+	}
+}
+
+func policyTypeFromString(str string) PolicyType {
+	switch str {
+	case "pi":
+		return PolicyInbound
+	case "po":
+		return PolicyOutbound
+	default:
+		glog.Fatalf("Unsupported policy type: %s", str)
+		// unreachable
+		return 0
+	}
+}
+
+func (pt PolicyType) String() string {
+	switch pt {
+	case PolicyInbound:
+		return "inbound"
+	case PolicyOutbound:
+		return "outbound"
+	default:
+		glog.Fatalf("Unsupported policy type: %d", pt)
+		return ""
 	}
 }
 
@@ -63,6 +92,11 @@ type Result struct {
 	Target       string
 }
 
+type DropChain struct {
+	PolicyType  PolicyType
+	PacketCount int
+}
+
 func Scan(cw watch.CalicoWatcher) ([]*Result, error) {
 	// first build a mapping from interface names to workload endpoints
 	workloads := cw.ListWorkloadEndpoints()
@@ -76,9 +110,10 @@ func Scan(cw watch.CalicoWatcher) ([]*Result, error) {
 }
 
 var (
-	appendRegexp = regexp.MustCompile(`^\[(\d+):\d+\] -A cali-([tf]w)-(\S+).*-j (\S+)$`)
-	dropSlice    = []byte("Drop if no policies passed packet")
-	acceptSlice  = []byte("Return if policy accepted")
+	appendRegexp    = regexp.MustCompile(`^\[(\d+):\d+] -A cali-([tf]w)-(\S+).*-j (\S+)$`)
+	dropPolicyRegex = regexp.MustCompile(`^\[(\d+):\d+] -A (cali-(p[io])-(\S+)).*-j DROP$`)
+	dropSlice       = []byte("Drop if no policies passed packet")
+	acceptSlice     = []byte("Return if policy accepted")
 )
 
 func iptablesSave(interfaceToWorkload map[string]*apiv3.WorkloadEndpoint) ([]*Result, error) {
@@ -122,8 +157,35 @@ func iptablesSave(interfaceToWorkload map[string]*apiv3.WorkloadEndpoint) ([]*Re
 func parseFrom(stdout io.Reader, interfaceToWorkload map[string]*apiv3.WorkloadEndpoint) ([]*Result, error) {
 	// we expect at most 4 counts per network interface, drop and accept for ingress and egress
 	results := make([]*Result, 0, 4*len(interfaceToWorkload))
+	dropChains := map[string]DropChain{}
 
-	scanner := bufio.NewScanner(stdout)
+	// Create a buffer because we loop through the output twice.
+	var buf bytes.Buffer
+	tee := io.TeeReader(stdout, &buf)
+
+	dropScanner := bufio.NewScanner(tee)
+	// Parse the entire output to find policies that have DROP actions and store
+	// the packet count so it can be used later.
+	for dropScanner.Scan() {
+		line := dropScanner.Bytes()
+		dropCapture := dropPolicyRegex.FindSubmatch(line)
+		if dropCapture != nil {
+			glog.V(3).Infof("Found drop policy: %s, packet count: %s", string(dropCapture[2]), string(dropCapture[1]))
+			dropPacketCount, err := strconv.Atoi(string(dropCapture[1]))
+			if err != nil {
+				glog.Errorf("Error parsing dropped packet count for policy %s: %v", string(dropCapture[2]), err)
+				continue
+			}
+
+			policyType := policyTypeFromString(string(dropCapture[3]))
+			dropChains[string(dropCapture[2])] = DropChain{
+				PolicyType:  policyType,
+				PacketCount: dropPacketCount,
+			}
+		}
+	}
+
+	scanner := bufio.NewScanner(&buf)
 	lastTarget := ""
 	for scanner.Scan() {
 		// Read the next line of the output.
@@ -159,6 +221,17 @@ func parseFrom(stdout io.Reader, interfaceToWorkload map[string]*apiv3.WorkloadE
 			continue
 		}
 
+		acceptType := Accept
+		// If the current packet count is 0, and target points to a policy with a drop rule then
+		// use the packet count from the drop rule.
+		if packetCount == 0 {
+			if v, ok := dropChains[lastTarget]; ok {
+				glog.V(3).Infof("Using packet count %d from target %s instead of count %d", v.PacketCount, lastTarget, packetCount)
+				packetCount = v.PacketCount
+				acceptType = AcceptedDrop
+			}
+		}
+
 		switch {
 		case isDrop:
 			result, err := buildResult(workload, Drop, typ, packetCount, target)
@@ -169,7 +242,7 @@ func parseFrom(stdout io.Reader, interfaceToWorkload map[string]*apiv3.WorkloadE
 			results = append(results, result)
 		case isAccept:
 			// When we find an accept line, we care about the target on the previous line
-			result, err := buildResult(workload, Accept, typ, packetCount, lastTarget)
+			result, err := buildResult(workload, acceptType, typ, packetCount, lastTarget)
 			if err != nil {
 				glog.Errorf("Error building result from line %s: %v", string(line), err)
 				continue

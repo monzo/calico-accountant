@@ -60,6 +60,9 @@ func TestParseFrom(t *testing.T) {
 [0:0] -A cali-fw-cali5125b8e5d77 -m comment --comment "cali:3sdhKBP7w38yxwGG" -j cali-pro-kns.default
 [0:0] -A cali-fw-cali5125b8e5d77 -m comment --comment "cali:emE9qPqe4hA5HBPo" -m comment --comment "Return if profile accepted" -m mark --mark 0x10000/0x10000 -j RETURN
 [0:0] -A cali-fw-cali5125b8e5d77 -m comment --comment "cali:s2Jrc8hOvqYYH_jj" -m comment --comment "Drop if no profiles matched" -j DROP
+[2452241:147135158] -A cali-fw-cali5125b8e5d77 -m comment --comment "cali:y2OJvPU3e2b4H92l" -m mark --mark 0x0/0x20000 -j cali-po-_iIL2GVSReX3hYOgY4sn
+[0:0] -A cali-fw-cali5125b8e5d77 -m comment --comment "cali:IAk_8-dD-Cqt3Gqu" -m comment --comment "Return if policy accepted" -m mark --mark 0x10000/0x10000 -j RETURN
+[1127764:67665840] -A cali-po-_iIL2GVSReX3hYOgY4sn -d 1.2.3.4/32 -m comment --comment "cali:5MnLDRihpdsyPItp" -j DROP
 `),
 				interfaceToWorkload: interfaceToWorkload,
 			},
@@ -101,6 +104,15 @@ func TestParseFrom(t *testing.T) {
 					CountType:    Drop,
 					PacketCount:  2,
 					Target:       "DROP",
+				}, {
+					PodName:      "foo",
+					PodNamespace: "ns",
+					AppLabel:     "bar",
+					PodIP:        "127.0.0.1",
+					ChainType:    FromWorkLoad,
+					CountType:    AcceptedDrop,
+					PacketCount:  1127764,
+					Target:       "cali-po-_iIL2GVSReX3hYOgY4sn",
 				},
 			},
 		}, {

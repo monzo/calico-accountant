@@ -89,7 +89,7 @@ func parse(metricChan chan<- prometheus.Metric, r *iptables.Result, cw watch.Cal
 			r.PodIP,
 			r.ChainType.String(),
 		)
-	case iptables.Accept:
+	case iptables.Accept, iptables.AcceptedDrop:
 		policyName := cw.GetPolicyByChainName(r.Target)
 
 		metricChan <- prometheus.MustNewConstMetric(
