@@ -18,6 +18,14 @@ var dropDesc = prometheus.NewDesc("no_policy_drop_counter", "Number of packets d
 	"ip",
 	"type",
 }, nil)
+var acceptDropDesc = prometheus.NewDesc("policy_accept_drop_counter", "Number of packets accepted by a calico drop policy on a workload", []string{
+	"pod",
+	"pod_namespace",
+	"app",
+	"ip",
+	"type",
+	"policy",
+}, nil)
 var acceptDesc = prometheus.NewDesc("policy_accept_counter", "Number of packets accepted by a policy on a workload", []string{
 	"pod",
 	"pod_namespace",
@@ -89,11 +97,25 @@ func parse(metricChan chan<- prometheus.Metric, r *iptables.Result, cw watch.Cal
 			r.PodIP,
 			r.ChainType.String(),
 		)
-	case iptables.Accept, iptables.AcceptedDrop:
+	case iptables.Accept:
 		policyName := cw.GetPolicyByChainName(r.Target)
 
 		metricChan <- prometheus.MustNewConstMetric(
 			acceptDesc,
+			prometheus.CounterValue,
+			float64(r.PacketCount),
+			r.PodName,
+			r.PodNamespace,
+			r.AppLabel,
+			r.PodIP,
+			r.ChainType.String(),
+			policyName,
+		)
+	case iptables.AcceptedDrop:
+		policyName := cw.GetPolicyByChainName(r.Target)
+
+		metricChan <- prometheus.MustNewConstMetric(
+			acceptDropDesc,
 			prometheus.CounterValue,
 			float64(r.PacketCount),
 			r.PodName,
