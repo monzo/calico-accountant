@@ -1,7 +1,7 @@
 all: build
 
 ENVVAR = GOOS=linux GOARCH=amd64
-TAG = v0.1.5
+TAG = v0.1.6
 APP_NAME = calico-accountant
 
 clean:
