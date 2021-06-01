@@ -1,0 +1,56 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: calico-accountant
+rules:
+- apiGroups: [""]
+  resources: ["pods", "services", "endpoints"]
+  verbs: ["get", "watch", "list"]
+- apiGroups: ["apps"]
+  resources: ["daemonsets", "statefulsets", "replicasets", "deployments"]
+  verbs: ["get", "watch", "list"]
+- apiGroups: [""]
+  resources: ["events"]
+  verbs: ["get", "watch", "list", "create", "patch", "update"]
+- apiGroups: ["crd.projectcalico.org"]
+  resources:
+    - bgppeers
+    - bgpconfigurations
+    - clusterinformations
+    - felixconfigurations
+    - globalnetworkpolicies
+    - globalnetworksets
+    - ippools
+    - kubecontrollersconfigurations
+    - networkpolicies
+apiVersion: v1
+    - networksets
+    - hostendpoints
+    - ipamblocks
+    - blockaffinities
+    - ipamhandles
+    - ipamconfigs
+  verbs:
+    - get
+    - list
+    - watch
+- apiGroups: ["networking.k8s.io"]
+  resources:
+    - networkpolicies
+  verbs:
+    - get
+    - list
+    - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: calico-accountant
+subjects:
+- kind: ServiceAccount
+  name: calico-accountant
+  namespace: kube-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: calico-accountant

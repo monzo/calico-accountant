@@ -1,15 +1,19 @@
 ---
-apiVersion: "extensions/v1beta1"
-kind: "DaemonSet"
+apiVersion: apps/v1
+kind: DaemonSet
 metadata:
-  name: "calico-accountant"
-  namespace: "kube-system"
+  name: calico-accountant
+  namespace: kube-system
 spec:
+  selector:
+    matchLabels:
+      app: calico-accountant
   template:
     metadata:
       labels:
-        app: "calico-accountant"
+        app: calico-accountant
     spec:
+      serviceAccountName: calico-accountant
       containers:
         - command:
            - "/calico-accountant"
@@ -21,12 +25,18 @@ spec:
               configMapKeyRef:
                 name: calico-config
                 key: etcd_endpoints
+          # On EKS/GKE with Calico using control plane etcd, 
+          # instead of ETCD_ENDPOINTS, use:
+#         - name: DATASTORE_TYPE
+#           value: "kubernetes"
           - name: NODE_NAME
             valueFrom:
               fieldRef:
                 fieldPath: spec.nodeName
-          image: "monzo/calico-accountant:v0.1.1"
-          name: "calico-accountant"
+          - name: METRICS_SERVER_PORT
+            value: "9009"
+          image: monzo/calico-accountant:v0.1.1 
+          name: calico-accountant
           securityContext:
             privileged: true
       hostNetwork: true
