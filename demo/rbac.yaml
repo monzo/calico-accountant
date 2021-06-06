@@ -23,8 +23,6 @@ rules:
     - ippools
     - kubecontrollersconfigurations
     - networkpolicies
----
-apiVersion: v1
     - networksets
     - hostendpoints
     - ipamblocks
